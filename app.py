@@ -91,14 +91,14 @@ def results():
     # datetime objects. You can do so using the `datetime.fromtimestamp()` 
     # function.
     context = {
-        'date': datetime.now(),
+        'date': datetime.now().strftime('%B %d, %Y'),
         'city': result_json['name'],
         'description': result_json['weather'][0]['description'],
         'temp': result_json['main']['temp'],
         'humidity': result_json['main']['humidity'],
         'wind_speed': result_json['wind']['speed'],
-        'sunrise': datetime.fromtimestamp(result_json['sys']['sunrise']),
-        'sunset': datetime.fromtimestamp(result_json['sys']['sunset']),
+        'sunrise': datetime.fromtimestamp(result_json['sys']['sunrise']).strftime('%I:%M:%S %p'),
+        'sunset': datetime.fromtimestamp(result_json['sys']['sunset']).strftime('%I:%M:%S %p'),
         'units_letter': get_letter_for_units(units)
     }
 
@@ -108,13 +108,28 @@ def get_min_temp(results):
     """Returns the minimum temp for the given hourly weather objects."""
     # TODO: Fill in this function to return the minimum temperature from the
     # hourly weather data.
-    return results['main']['temp_min']
+    # Iterate through the list in search of the lowest hourly temperature
+    min_temp = results[0]['temp']
+    for i in range(len(results)):
+        temp = results[i]['temp']
+        # If new lowest temperature is found, set min_temp to it
+        if temp < min_temp:
+            min_temp = temp
+    return min_temp
 
 def get_max_temp(results):
     """Returns the maximum temp for the given hourly weather objects."""
     # TODO: Fill in this function to return the maximum temperature from the
     # hourly weather data.
-    return results['main']['temp_max']
+    # Iterate through the list in search of the highest hourly temperature
+    max_temp = results[0]['temp']
+    for i in range(len(results)):
+        temp = results[i]['temp']
+        # If new highest temperature is found, set max_temp to it
+        if temp > max_temp:
+            max_temp = temp
+    return max_temp
+
 
 def get_lat_lon(city_name):
     geolocator = Nominatim(user_agent='Weather Application')
@@ -129,13 +144,15 @@ def historical_results():
     """Displays historical weather forecast for a given day."""
     # TODO: Use 'request.args' to retrieve the city & units from the query
     # parameters.
-    city = ''
-    date = '2020-08-26'
-    units = ''
+    city = request.args.get('city')
+    date = request.args.get('date')
+    units = request.args.get('units')
     date_obj = datetime.strptime(date, '%Y-%m-%d')
     date_in_seconds = date_obj.strftime('%s')
 
     latitude, longitude = get_lat_lon(city)
+    # print(latitude)
+    # print(longitude)
 
     url = 'http://api.openweathermap.org/data/2.5/onecall/timemachine'
     params = {
@@ -143,13 +160,21 @@ def historical_results():
         # latitude, longitude, units, & date (in seconds).
         # See the documentation here (scroll down to "Historical weather data"):
         # https://openweathermap.org/api/one-call-api
-        
+        # Unique API key
+        'appid': API_KEY,
+        # Latitude and longitude
+        'lat': latitude,
+        'lon': longitude,
+        # Units of measurement for temperature
+        'units': units,
+        # Date in seconds
+        'dt': date_in_seconds
     }
 
     result_json = requests.get(url, params=params).json()
 
     # Uncomment the line below to see the results of the API call!
-    # pp.pprint(result_json)
+    pp.pprint(result_json)
 
     result_current = result_json['current']
     result_hourly = result_json['hourly']
@@ -157,14 +182,14 @@ def historical_results():
     # TODO: Replace the empty variables below with their appropriate values.
     # You'll need to retrieve these from the 'result_current' object above.
     context = {
-        'city': '',
+        'city': city,
         'date': date_obj,
         'lat': latitude,
         'lon': longitude,
-        'units': '',
-        'units_letter': '', # should be 'C', 'F', or 'K'
-        'description': '',
-        'temp': '',
+        'units': units,
+        'units_letter': get_letter_for_units(units), # should be 'C', 'F', or 'K'
+        'description': result_current['weather'][0]['description'],
+        'temp': result_current['temp'],
         'min_temp': get_min_temp(result_hourly),
         'max_temp': get_max_temp(result_hourly)
     }
